@@ -1,0 +1,413 @@
+// ============================================================================
+// iKampus Protocol Buffers - User Service
+// ============================================================================
+// User profiles, follows, blocks, and social graph
+// Service: UserService
+// Version: 1.0
+// Package: ikampus.user
+
+syntax = "proto3";
+
+package ikampus.user;
+
+option go_package = "github.com/ikampus/protos/user;user";
+option java_package = "com.ikampus.protos.user";
+option java_multiple_files = true;
+option csharp_namespace = "IKampus.Protos.User";
+
+import "common/common.proto";
+import "google/protobuf/timestamp.proto";
+
+// ============================================================================
+// UserService - User Profile Management
+// ============================================================================
+
+service UserService {
+  // Get user profile by ID
+  rpc GetUser(GetUserRequest) returns (UserProfile);
+
+  // Get user profile by username
+  rpc GetUserByUsername(GetUserByUsernameRequest) returns (UserProfile);
+
+  // Get multiple users by IDs (batch)
+  rpc GetUsers(GetUsersRequest) returns (GetUsersResponse);
+
+  // Update user profile
+  rpc UpdateProfile(UpdateProfileRequest) returns (UserProfile);
+
+  // Update avatar
+  rpc UpdateAvatar(UpdateAvatarRequest) returns (common.SuccessResponse);
+
+  // Update cover photo
+  rpc UpdateCoverPhoto(UpdateCoverPhotoRequest) returns (common.SuccessResponse);
+
+  // Search users
+  rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse);
+
+  // Follow user
+  rpc FollowUser(FollowUserRequest) returns (common.SuccessResponse);
+
+  // Unfollow user
+  rpc UnfollowUser(UnfollowUserRequest) returns (common.SuccessResponse);
+
+  // Get followers
+  rpc GetFollowers(GetFollowersRequest) returns (GetFollowersResponse);
+
+  // Get following
+  rpc GetFollowing(GetFollowingRequest) returns (GetFollowingResponse);
+
+  // Check if following
+  rpc IsFollowing(IsFollowingRequest) returns (IsFollowingResponse);
+
+  // Block user
+  rpc BlockUser(BlockUserRequest) returns (common.SuccessResponse);
+
+  // Unblock user
+  rpc UnblockUser(UnblockUserRequest) returns (common.SuccessResponse);
+
+  // Get blocked users
+  rpc GetBlockedUsers(GetBlockedUsersRequest) returns (GetBlockedUsersResponse);
+
+  // Check if blocked
+  rpc IsBlocked(IsBlockedRequest) returns (IsBlockedResponse);
+
+  // Get user statistics
+  rpc GetUserStats(GetUserStatsRequest) returns (UserStats);
+
+  // Get user activity
+  rpc GetUserActivity(GetUserActivityRequest) returns (GetUserActivityResponse);
+
+  // Update user settings
+  rpc UpdateSettings(UpdateSettingsRequest) returns (UserSettings);
+
+  // Get user settings
+  rpc GetSettings(GetSettingsRequest) returns (UserSettings);
+
+  // Deactivate account
+  rpc DeactivateAccount(DeactivateAccountRequest) returns (common.SuccessResponse);
+
+  // Delete account
+  rpc DeleteAccount(DeleteAccountRequest) returns (common.SuccessResponse);
+}
+
+// ============================================================================
+// User Profile
+// ============================================================================
+
+message UserProfile {
+  string id = 1;
+  string username = 2;
+  string display_name = 3;
+  string bio = 4;
+  string email = 5;                    // Only visible to self
+  string avatar_url = 6;
+  string cover_photo_url = 7;
+
+  // Academic info
+  string course = 8;
+  int32 year_of_study = 9;
+  int32 graduation_year = 10;
+  common.UniversityRef university = 11;
+
+  // Social
+  int32 follower_count = 12;
+  int32 following_count = 13;
+  int32 post_count = 14;
+
+  // Links
+  repeated string interests = 15;
+  string website_url = 16;
+  string linkedin_url = 17;
+  string github_url = 18;
+
+  // Privacy
+  bool is_public = 19;
+  bool is_searchable = 20;
+  bool show_email = 21;
+
+  // Status
+  common.UserRole role = 22;
+  common.AccountStatus status = 23;
+  bool email_verified = 24;
+  bool student_verified = 25;
+
+  // Relationship (from requester's perspective)
+  UserRelationship relationship = 26;
+
+  // Timestamps
+  google.protobuf.Timestamp created_at = 27;
+  google.protobuf.Timestamp updated_at = 28;
+}
+
+message UserRelationship {
+  bool is_following = 1;
+  bool is_follower = 2;
+  bool is_blocked = 3;
+  bool is_blocking = 4;
+}
+
+// ============================================================================
+// Get User Operations
+// ============================================================================
+
+message GetUserRequest {
+  string user_id = 1;
+  string requester_id = 2;       // For relationship calculation
+}
+
+message GetUserByUsernameRequest {
+  string username = 1;
+  string requester_id = 2;
+}
+
+message GetUsersRequest {
+  repeated string user_ids = 1;
+  string requester_id = 2;
+}
+
+message GetUsersResponse {
+  repeated UserProfile users = 1;
+}
+
+// ============================================================================
+// Update Profile
+// ============================================================================
+
+message UpdateProfileRequest {
+  string user_id = 1;
+  optional string display_name = 2;
+  optional string bio = 3;
+  optional string course = 4;
+  optional int32 year_of_study = 5;
+  optional int32 graduation_year = 6;
+  repeated string interests = 7;
+  optional string website_url = 8;
+  optional string linkedin_url = 9;
+  optional string github_url = 10;
+  optional bool is_public = 11;
+  optional bool is_searchable = 12;
+  optional bool show_email = 13;
+}
+
+message UpdateAvatarRequest {
+  string user_id = 1;
+  string avatar_url = 2;
+}
+
+message UpdateCoverPhotoRequest {
+  string user_id = 1;
+  string cover_photo_url = 2;
+}
+
+// ============================================================================
+// Search Users
+// ============================================================================
+
+message SearchUsersRequest {
+  string query = 1;
+  string requester_id = 2;
+  SearchFilters filters = 3;
+  common.PaginationRequest pagination = 4;
+}
+
+message SearchFilters {
+  string university_id = 1;
+  string course = 2;
+  int32 year_of_study = 3;
+  repeated string interests = 4;
+  bool verified_only = 5;
+}
+
+message SearchUsersResponse {
+  repeated UserProfile users = 1;
+  common.PaginationResponse pagination = 2;
+}
+
+// ============================================================================
+// Follow/Unfollow
+// ============================================================================
+
+message FollowUserRequest {
+  string follower_id = 1;        // User doing the following
+  string following_id = 2;       // User being followed
+}
+
+message UnfollowUserRequest {
+  string follower_id = 1;
+  string following_id = 2;
+}
+
+message GetFollowersRequest {
+  string user_id = 1;
+  string requester_id = 2;
+  common.PaginationRequest pagination = 3;
+}
+
+message GetFollowersResponse {
+  repeated UserProfile users = 1;
+  common.PaginationResponse pagination = 2;
+}
+
+message GetFollowingRequest {
+  string user_id = 1;
+  string requester_id = 2;
+  common.PaginationRequest pagination = 3;
+}
+
+message GetFollowingResponse {
+  repeated UserProfile users = 1;
+  common.PaginationResponse pagination = 2;
+}
+
+message IsFollowingRequest {
+  string follower_id = 1;
+  string following_id = 2;
+}
+
+message IsFollowingResponse {
+  bool is_following = 1;
+  google.protobuf.Timestamp followed_at = 2;
+}
+
+// ============================================================================
+// Block/Unblock
+// ============================================================================
+
+message BlockUserRequest {
+  string blocker_id = 1;
+  string blocked_id = 2;
+  string reason = 3;
+}
+
+message UnblockUserRequest {
+  string blocker_id = 1;
+  string blocked_id = 2;
+}
+
+message GetBlockedUsersRequest {
+  string user_id = 1;
+  common.PaginationRequest pagination = 2;
+}
+
+message GetBlockedUsersResponse {
+  repeated BlockedUser users = 1;
+  common.PaginationResponse pagination = 2;
+}
+
+message BlockedUser {
+  common.UserRef user = 1;
+  string reason = 2;
+  google.protobuf.Timestamp blocked_at = 3;
+}
+
+message IsBlockedRequest {
+  string blocker_id = 1;
+  string blocked_id = 2;
+}
+
+message IsBlockedResponse {
+  bool is_blocked = 1;
+}
+
+// ============================================================================
+// User Statistics
+// ============================================================================
+
+message GetUserStatsRequest {
+  string user_id = 1;
+}
+
+message UserStats {
+  int32 follower_count = 1;
+  int32 following_count = 2;
+  int32 post_count = 3;
+  int32 comment_count = 4;
+  int32 reaction_count = 5;
+  int32 community_count = 6;
+  int32 event_count = 7;
+  int32 startup_count = 8;
+  double engagement_score = 9;
+  google.protobuf.Timestamp last_active_at = 10;
+}
+
+// ============================================================================
+// User Activity
+// ============================================================================
+
+message GetUserActivityRequest {
+  string user_id = 1;
+  int32 days = 2;                // Last N days (default: 30)
+}
+
+message GetUserActivityResponse {
+  ActivitySummary summary = 1;
+  repeated DailyActivity daily_activity = 2;
+}
+
+message ActivitySummary {
+  int32 posts_created = 1;
+  int32 comments_made = 2;
+  int32 reactions_given = 3;
+  int32 events_attended = 4;
+  int32 communities_joined = 5;
+}
+
+message DailyActivity {
+  string date = 1;               // YYYY-MM-DD
+  int32 post_count = 2;
+  int32 comment_count = 3;
+  int32 reaction_count = 4;
+}
+
+// ============================================================================
+// User Settings
+// ============================================================================
+
+message GetSettingsRequest {
+  string user_id = 1;
+}
+
+message UpdateSettingsRequest {
+  string user_id = 1;
+  UserSettings settings = 2;
+}
+
+message UserSettings {
+  // Privacy
+  bool profile_is_public = 1;
+  bool profile_is_searchable = 2;
+  bool show_email = 3;
+  bool show_online_status = 4;
+
+  // Notifications (basic flags, detailed in NotificationService)
+  bool notifications_enabled = 5;
+  bool email_notifications = 6;
+  bool push_notifications = 7;
+
+  // Content preferences
+  bool show_nsfw_content = 8;
+  string language = 9;
+  string timezone = 10;
+
+  // Privacy controls
+  bool allow_message_requests = 11;
+  bool allow_tags = 12;
+  bool allow_mentions = 13;
+
+  google.protobuf.Timestamp updated_at = 14;
+}
+
+// ============================================================================
+// Account Management
+// ============================================================================
+
+message DeactivateAccountRequest {
+  string user_id = 1;
+  string reason = 2;
+}
+
+message DeleteAccountRequest {
+  string user_id = 1;
+  string password = 2;           // Confirm with password
+  string reason = 3;
+}

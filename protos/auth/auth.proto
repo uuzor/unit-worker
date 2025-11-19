@@ -1,0 +1,290 @@
+// ============================================================================
+// iKampus Protocol Buffers - Authentication Service
+// ============================================================================
+// Authentication, authorization, and student verification
+// Service: AuthService
+// Version: 1.0
+// Package: ikampus.auth
+
+syntax = "proto3";
+
+package ikampus.auth;
+
+option go_package = "github.com/ikampus/protos/auth;auth";
+option java_package = "com.ikampus.protos.auth";
+option java_multiple_files = true;
+option csharp_namespace = "IKampus.Protos.Auth";
+
+import "common/common.proto";
+import "google/protobuf/timestamp.proto";
+
+// ============================================================================
+// AuthService - Authentication and Authorization
+// ============================================================================
+
+service AuthService {
+  // Sign up new user with university email
+  rpc SignUp(SignUpRequest) returns (SignUpResponse);
+
+  // Verify email address
+  rpc VerifyEmail(VerifyEmailRequest) returns (VerifyEmailResponse);
+
+  // Resend verification email
+  rpc ResendVerificationEmail(ResendVerificationRequest) returns (common.SuccessResponse);
+
+  // Login with email and password
+  rpc Login(LoginRequest) returns (LoginResponse);
+
+  // Refresh access token
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+
+  // Logout (revoke refresh token)
+  rpc Logout(LogoutRequest) returns (common.SuccessResponse);
+
+  // Logout from all devices
+  rpc LogoutAll(LogoutAllRequest) returns (common.SuccessResponse);
+
+  // Validate access token (for API Gateway)
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+
+  // Request password reset
+  rpc RequestPasswordReset(PasswordResetRequest) returns (common.SuccessResponse);
+
+  // Reset password with token
+  rpc ResetPassword(ResetPasswordRequest) returns (common.SuccessResponse);
+
+  // Change password (authenticated)
+  rpc ChangePassword(ChangePasswordRequest) returns (common.SuccessResponse);
+
+  // Submit student verification
+  rpc SubmitStudentVerification(StudentVerificationRequest) returns (StudentVerificationResponse);
+
+  // Get verification status
+  rpc GetVerificationStatus(GetVerificationStatusRequest) returns (VerificationStatusResponse);
+
+  // Get active sessions
+  rpc GetActiveSessions(GetActiveSessionsRequest) returns (GetActiveSessionsResponse);
+
+  // Revoke session
+  rpc RevokeSession(RevokeSessionRequest) returns (common.SuccessResponse);
+}
+
+// ============================================================================
+// Sign Up
+// ============================================================================
+
+message SignUpRequest {
+  string email = 1;              // University email (.ac.uk)
+  string password = 2;           // Password (min 8 chars)
+  string username = 3;           // Unique username
+  string display_name = 4;       // Display name
+  string university_id = 5;      // University ID
+  string course = 6;             // Course/program
+  int32 year_of_study = 7;       // Year (1-10)
+  int32 graduation_year = 8;     // Expected graduation year
+  repeated string interests = 9; // Interest tags
+
+  // Device info
+  string device_id = 10;
+  string device_name = 11;
+  string device_type = 12;       // ios, android, web
+  string user_agent = 13;
+}
+
+message SignUpResponse {
+  string user_id = 1;
+  string email = 2;
+  string username = 3;
+  bool email_verified = 4;
+  string message = 5;            // "Please verify your email"
+}
+
+// ============================================================================
+// Email Verification
+// ============================================================================
+
+message VerifyEmailRequest {
+  string token = 1;              // Verification token from email
+}
+
+message VerifyEmailResponse {
+  bool success = 1;
+  string message = 2;
+  TokenPair tokens = 3;          // JWT tokens after verification
+}
+
+message ResendVerificationRequest {
+  string email = 1;
+}
+
+// ============================================================================
+// Login
+// ============================================================================
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+
+  // Device info
+  string device_id = 3;
+  string device_name = 4;
+  string device_type = 5;
+  string user_agent = 6;
+}
+
+message LoginResponse {
+  bool success = 1;
+  string message = 2;
+  TokenPair tokens = 3;
+  User user = 4;
+}
+
+message TokenPair {
+  string access_token = 1;       // JWT access token (15min expiry)
+  string refresh_token = 2;      // Refresh token (30 days expiry)
+  google.protobuf.Timestamp access_token_expires_at = 3;
+  google.protobuf.Timestamp refresh_token_expires_at = 4;
+}
+
+message User {
+  string id = 1;
+  string email = 2;
+  string username = 3;
+  string display_name = 4;
+  string avatar_url = 5;
+  common.UserRole role = 6;
+  common.AccountStatus status = 7;
+  bool email_verified = 8;
+  bool student_verified = 9;
+  string university_id = 10;
+  google.protobuf.Timestamp created_at = 11;
+}
+
+// ============================================================================
+// Token Operations
+// ============================================================================
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message RefreshTokenResponse {
+  TokenPair tokens = 1;
+}
+
+message ValidateTokenRequest {
+  string access_token = 1;
+}
+
+message ValidateTokenResponse {
+  bool valid = 1;
+  string user_id = 2;
+  string username = 3;
+  common.UserRole role = 4;
+  repeated string permissions = 5;
+  google.protobuf.Timestamp expires_at = 6;
+}
+
+message LogoutRequest {
+  string refresh_token = 1;
+}
+
+message LogoutAllRequest {
+  string user_id = 1;
+}
+
+// ============================================================================
+// Password Reset
+// ============================================================================
+
+message PasswordResetRequest {
+  string email = 1;
+}
+
+message ResetPasswordRequest {
+  string token = 1;              // Reset token from email
+  string new_password = 2;
+}
+
+message ChangePasswordRequest {
+  string user_id = 1;
+  string current_password = 2;
+  string new_password = 3;
+}
+
+// ============================================================================
+// Student Verification
+// ============================================================================
+
+message StudentVerificationRequest {
+  string user_id = 1;
+  string student_id = 2;         // Student ID number (optional)
+  string document_url = 3;       // URL to uploaded verification document
+  string verification_method = 4; // 'email', 'student_id', 'manual'
+  string notes = 5;              // Additional notes
+}
+
+message StudentVerificationResponse {
+  string verification_id = 1;
+  common.VerificationStatus status = 2;
+  string message = 3;
+  google.protobuf.Timestamp submitted_at = 4;
+}
+
+message GetVerificationStatusRequest {
+  string user_id = 1;
+}
+
+message VerificationStatusResponse {
+  string verification_id = 1;
+  common.VerificationStatus status = 2;
+  string verification_method = 3;
+  google.protobuf.Timestamp submitted_at = 4;
+  google.protobuf.Timestamp reviewed_at = 5;
+  string rejection_reason = 6;
+}
+
+// ============================================================================
+// Session Management
+// ============================================================================
+
+message GetActiveSessionsRequest {
+  string user_id = 1;
+}
+
+message GetActiveSessionsResponse {
+  repeated Session sessions = 1;
+}
+
+message Session {
+  string id = 1;
+  string device_id = 2;
+  string device_name = 3;
+  string device_type = 4;
+  string ip_address = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp last_used_at = 7;
+  google.protobuf.Timestamp expires_at = 8;
+  bool is_current = 9;           // Is this the current session?
+}
+
+message RevokeSessionRequest {
+  string user_id = 1;
+  string session_id = 2;
+}
+
+// ============================================================================
+// Admin Operations
+// ============================================================================
+
+message ApproveVerificationRequest {
+  string verification_id = 1;
+  string reviewer_id = 2;
+  string notes = 3;
+}
+
+message RejectVerificationRequest {
+  string verification_id = 1;
+  string reviewer_id = 2;
+  string reason = 3;
+}

@@ -1,0 +1,245 @@
+// ============================================================================
+// iKampus Protocol Buffers - Common Types
+// ============================================================================
+// Shared message types used across multiple services
+// Version: 1.0
+// Package: ikampus.common
+
+syntax = "proto3";
+
+package ikampus.common;
+
+option go_package = "github.com/ikampus/protos/common;common";
+option java_package = "com.ikampus.protos.common";
+option java_multiple_files = true;
+option csharp_namespace = "IKampus.Protos.Common";
+
+import "google/protobuf/timestamp.proto";
+
+// ============================================================================
+// Common Types
+// ============================================================================
+
+// Empty message for requests/responses with no data
+message Empty {}
+
+// Generic success response
+message SuccessResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Pagination request parameters
+message PaginationRequest {
+  int32 page = 1;           // Page number (1-indexed)
+  int32 page_size = 2;      // Items per page (default: 20, max: 100)
+  string cursor = 3;        // Cursor for cursor-based pagination (optional)
+}
+
+// Pagination response metadata
+message PaginationResponse {
+  int32 page = 1;
+  int32 page_size = 2;
+  int32 total_items = 3;
+  int32 total_pages = 4;
+  bool has_next = 5;
+  bool has_previous = 6;
+  string next_cursor = 7;
+  string previous_cursor = 8;
+}
+
+// UUID message type
+message UUID {
+  string value = 1;  // UUID as string (e.g., "123e4567-e89b-12d3-a456-426614174000")
+}
+
+// Timestamp range for filtering
+message TimeRange {
+  google.protobuf.Timestamp start = 1;
+  google.protobuf.Timestamp end = 2;
+}
+
+// Geographic location (PostGIS compatible)
+message Location {
+  double latitude = 1;
+  double longitude = 2;
+  string name = 3;           // Human-readable name (e.g., "Library")
+  string details = 4;        // Additional details (e.g., "Room 101")
+}
+
+// Media attachment (images, videos, files)
+message MediaAttachment {
+  string id = 1;
+  MediaType type = 2;
+  string url = 3;            // CDN URL
+  string thumbnail_url = 4;  // Thumbnail for videos/images
+  MediaMetadata metadata = 5;
+}
+
+enum MediaType {
+  MEDIA_TYPE_UNSPECIFIED = 0;
+  MEDIA_TYPE_IMAGE = 1;
+  MEDIA_TYPE_VIDEO = 2;
+  MEDIA_TYPE_FILE = 3;
+  MEDIA_TYPE_AUDIO = 4;
+}
+
+message MediaMetadata {
+  int64 size_bytes = 1;
+  int32 width = 2;           // For images/videos
+  int32 height = 3;          // For images/videos
+  int32 duration_seconds = 4; // For videos/audio
+  string mime_type = 5;
+  string original_filename = 6;
+}
+
+// Error details for gRPC status
+message ErrorDetails {
+  string code = 1;           // Application error code
+  string message = 2;        // Human-readable error message
+  map<string, string> metadata = 3;  // Additional error context
+}
+
+// User reference (lightweight user info)
+message UserRef {
+  string id = 1;
+  string username = 2;
+  string display_name = 3;
+  string avatar_url = 4;
+  bool is_verified = 5;      // Verified student
+}
+
+// University reference
+message UniversityRef {
+  string id = 1;
+  string name = 2;
+  string short_name = 3;
+  string logo_url = 4;
+}
+
+// Community reference
+message CommunityRef {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  string avatar_url = 4;
+  CommunityType type = 5;
+}
+
+enum CommunityType {
+  COMMUNITY_TYPE_UNSPECIFIED = 0;
+  COMMUNITY_TYPE_COURSE = 1;
+  COMMUNITY_TYPE_SOCIETY = 2;
+  COMMUNITY_TYPE_HALL = 3;
+  COMMUNITY_TYPE_INTEREST = 4;
+  COMMUNITY_TYPE_OFFICIAL = 5;
+}
+
+// Startup reference
+message StartupRef {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  string tagline = 4;
+  string logo_url = 5;
+  StartupStage stage = 6;
+}
+
+enum StartupStage {
+  STARTUP_STAGE_UNSPECIFIED = 0;
+  STARTUP_STAGE_IDEA = 1;
+  STARTUP_STAGE_MVP = 2;
+  STARTUP_STAGE_BETA = 3;
+  STARTUP_STAGE_LAUNCHED = 4;
+  STARTUP_STAGE_SCALING = 5;
+  STARTUP_STAGE_FUNDED = 6;
+}
+
+// Visibility levels
+enum Visibility {
+  VISIBILITY_UNSPECIFIED = 0;
+  VISIBILITY_PUBLIC = 1;
+  VISIBILITY_UNIVERSITY = 2;
+  VISIBILITY_COMMUNITY = 3;
+  VISIBILITY_FOLLOWERS = 4;
+  VISIBILITY_PRIVATE = 5;
+}
+
+// User roles
+enum UserRole {
+  USER_ROLE_UNSPECIFIED = 0;
+  USER_ROLE_STUDENT = 1;
+  USER_ROLE_ALUMNI = 2;
+  USER_ROLE_MODERATOR = 3;
+  USER_ROLE_ADMIN = 4;
+}
+
+// Account status
+enum AccountStatus {
+  ACCOUNT_STATUS_UNSPECIFIED = 0;
+  ACCOUNT_STATUS_ACTIVE = 1;
+  ACCOUNT_STATUS_SUSPENDED = 2;
+  ACCOUNT_STATUS_DELETED = 3;
+  ACCOUNT_STATUS_BANNED = 4;
+}
+
+// Verification status
+enum VerificationStatus {
+  VERIFICATION_STATUS_UNSPECIFIED = 0;
+  VERIFICATION_STATUS_PENDING = 1;
+  VERIFICATION_STATUS_APPROVED = 2;
+  VERIFICATION_STATUS_REJECTED = 3;
+  VERIFICATION_STATUS_EXPIRED = 4;
+}
+
+// Sort order
+enum SortOrder {
+  SORT_ORDER_UNSPECIFIED = 0;
+  SORT_ORDER_ASC = 1;
+  SORT_ORDER_DESC = 2;
+}
+
+// Common filter operators
+enum FilterOperator {
+  FILTER_OPERATOR_UNSPECIFIED = 0;
+  FILTER_OPERATOR_EQUALS = 1;
+  FILTER_OPERATOR_NOT_EQUALS = 2;
+  FILTER_OPERATOR_GREATER_THAN = 3;
+  FILTER_OPERATOR_LESS_THAN = 4;
+  FILTER_OPERATOR_CONTAINS = 5;
+  FILTER_OPERATOR_IN = 6;
+}
+
+// Generic filter
+message Filter {
+  string field = 1;
+  FilterOperator operator = 2;
+  string value = 3;
+  repeated string values = 4;  // For IN operator
+}
+
+// Metadata for tracking
+message RequestMetadata {
+  string request_id = 1;      // Unique request ID for tracing
+  string user_id = 2;         // Authenticated user ID
+  string device_id = 3;       // Device identifier
+  string ip_address = 4;      // Client IP address
+  string user_agent = 5;      // User agent string
+  string platform = 6;        // ios, android, web
+  string app_version = 7;     // Application version
+}
+
+// Health check (standard gRPC health check)
+message HealthCheckRequest {
+  string service = 1;
+}
+
+message HealthCheckResponse {
+  enum ServingStatus {
+    UNKNOWN = 0;
+    SERVING = 1;
+    NOT_SERVING = 2;
+    SERVICE_UNKNOWN = 3;
+  }
+  ServingStatus status = 1;
+}

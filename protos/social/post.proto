@@ -1,0 +1,465 @@
+// ============================================================================
+// iKampus Protocol Buffers - Post Service
+// ============================================================================
+// Posts, comments, reactions, and engagement
+// Service: PostService
+// Version: 1.0
+// Package: ikampus.social
+
+syntax = "proto3";
+
+package ikampus.social;
+
+option go_package = "github.com/ikampus/protos/social;social";
+option java_package = "com.ikampus.protos.social";
+option java_multiple_files = true;
+option csharp_namespace = "IKampus.Protos.Social";
+
+import "common/common.proto";
+import "google/protobuf/timestamp.proto";
+
+// ============================================================================
+// PostService - Posts, Comments, and Reactions
+// ============================================================================
+
+service PostService {
+  // Create post
+  rpc CreatePost(CreatePostRequest) returns (Post);
+
+  // Get post by ID
+  rpc GetPost(GetPostRequest) returns (Post);
+
+  // Update post
+  rpc UpdatePost(UpdatePostRequest) returns (Post);
+
+  // Delete post
+  rpc DeletePost(DeletePostRequest) returns (common.SuccessResponse);
+
+  // Get posts (with filters)
+  rpc ListPosts(ListPostsRequest) returns (ListPostsResponse);
+
+  // Get user posts
+  rpc GetUserPosts(GetUserPostsRequest) returns (ListPostsResponse);
+
+  // Get community posts
+  rpc GetCommunityPosts(GetCommunityPostsRequest) returns (ListPostsResponse);
+
+  // ===== Comments =====
+
+  // Add comment to post
+  rpc AddComment(AddCommentRequest) returns (Comment);
+
+  // Get comments for post
+  rpc GetComments(GetCommentsRequest) returns (GetCommentsResponse);
+
+  // Update comment
+  rpc UpdateComment(UpdateCommentRequest) returns (Comment);
+
+  // Delete comment
+  rpc DeleteComment(DeleteCommentRequest) returns (common.SuccessResponse);
+
+  // ===== Reactions =====
+
+  // Add reaction to post
+  rpc AddPostReaction(AddPostReactionRequest) returns (common.SuccessResponse);
+
+  // Remove reaction from post
+  rpc RemovePostReaction(RemovePostReactionRequest) returns (common.SuccessResponse);
+
+  // Get post reactions
+  rpc GetPostReactions(GetPostReactionsRequest) returns (GetPostReactionsResponse);
+
+  // Add reaction to comment
+  rpc AddCommentReaction(AddCommentReactionRequest) returns (common.SuccessResponse);
+
+  // Remove reaction from comment
+  rpc RemoveCommentReaction(RemoveCommentReactionRequest) returns (common.SuccessResponse);
+
+  // ===== Bookmarks =====
+
+  // Save post
+  rpc SavePost(SavePostRequest) returns (common.SuccessResponse);
+
+  // Unsave post
+  rpc UnsavePost(UnsavePostRequest) returns (common.SuccessResponse);
+
+  // Get saved posts
+  rpc GetSavedPosts(GetSavedPostsRequest) returns (ListPostsResponse);
+
+  // ===== Polls =====
+
+  // Vote on poll
+  rpc VotePoll(VotePollRequest) returns (PollResults);
+
+  // Get poll results
+  rpc GetPollResults(GetPollResultsRequest) returns (PollResults);
+
+  // ===== Reporting =====
+
+  // Report post
+  rpc ReportPost(ReportPostRequest) returns (common.SuccessResponse);
+
+  // Report comment
+  rpc ReportComment(ReportCommentRequest) returns (common.SuccessResponse);
+}
+
+// ============================================================================
+// Post Types
+// ============================================================================
+
+enum PostType {
+  POST_TYPE_UNSPECIFIED = 0;
+  POST_TYPE_TEXT = 1;
+  POST_TYPE_IMAGE = 2;
+  POST_TYPE_VIDEO = 3;
+  POST_TYPE_POLL = 4;
+  POST_TYPE_CONFESSION = 5;
+}
+
+enum ReactionType {
+  REACTION_TYPE_UNSPECIFIED = 0;
+  REACTION_TYPE_LIKE = 1;
+  REACTION_TYPE_LOVE = 2;
+  REACTION_TYPE_CELEBRATE = 3;
+  REACTION_TYPE_INSIGHTFUL = 4;
+  REACTION_TYPE_SUPPORT = 5;
+  REACTION_TYPE_FUNNY = 6;
+}
+
+// ============================================================================
+// Post Message
+// ============================================================================
+
+message Post {
+  string id = 1;
+  common.UserRef author = 2;
+  common.CommunityRef community = 3;
+  PostType type = 4;
+  common.Visibility visibility = 5;
+  string content = 6;
+  repeated common.MediaAttachment media = 7;
+  repeated string hashtags = 8;
+  repeated common.UserRef mentions = 9;
+  common.Location location = 10;
+  Poll poll = 11;                      // Only if type = POLL
+
+  // Metadata
+  bool is_anonymous = 12;
+  bool is_pinned = 13;
+  bool is_edited = 14;
+  bool is_saved = 15;                  // From requester's perspective
+  UserReaction user_reaction = 16;    // Requester's reaction
+
+  // Counts
+  int32 reaction_count = 17;
+  int32 comment_count = 18;
+  int32 share_count = 19;
+  int32 view_count = 20;
+  double engagement_score = 21;
+
+  // Moderation
+  bool flagged = 22;
+
+  // Timestamps
+  google.protobuf.Timestamp created_at = 23;
+  google.protobuf.Timestamp updated_at = 24;
+  google.protobuf.Timestamp edited_at = 25;
+}
+
+message UserReaction {
+  bool has_reacted = 1;
+  ReactionType reaction_type = 2;
+  google.protobuf.Timestamp reacted_at = 3;
+}
+
+// ============================================================================
+// Create Post
+// ============================================================================
+
+message CreatePostRequest {
+  string user_id = 1;
+  string community_id = 2;            // Optional
+  PostType type = 3;
+  common.Visibility visibility = 4;
+  string content = 5;
+  repeated string media_urls = 6;
+  common.Location location = 7;
+  bool is_anonymous = 8;
+  PollData poll = 9;                  // If type = POLL
+}
+
+message CreatePostResponse {
+  Post post = 1;
+}
+
+// ============================================================================
+// Get/Update/Delete Post
+// ============================================================================
+
+message GetPostRequest {
+  string post_id = 1;
+  string requester_id = 2;
+}
+
+message UpdatePostRequest {
+  string post_id = 1;
+  string user_id = 2;
+  optional string content = 3;
+  repeated string media_urls = 4;
+  optional common.Visibility visibility = 5;
+}
+
+message DeletePostRequest {
+  string post_id = 1;
+  string user_id = 2;
+}
+
+// ============================================================================
+// List Posts
+// ============================================================================
+
+message ListPostsRequest {
+  string requester_id = 1;
+  PostFilters filters = 2;
+  PostSortOrder sort_order = 3;
+  common.PaginationRequest pagination = 4;
+}
+
+message PostFilters {
+  string community_id = 1;
+  string user_id = 2;
+  repeated PostType types = 3;
+  repeated string hashtags = 4;
+  common.Visibility visibility = 5;
+  bool has_media = 6;
+  bool has_poll = 7;
+  common.TimeRange time_range = 8;
+}
+
+enum PostSortOrder {
+  POST_SORT_ORDER_UNSPECIFIED = 0;
+  POST_SORT_ORDER_RECENT = 1;
+  POST_SORT_ORDER_POPULAR = 2;        // By engagement score
+  POST_SORT_ORDER_TRENDING = 3;       // By trending score
+}
+
+message ListPostsResponse {
+  repeated Post posts = 1;
+  common.PaginationResponse pagination = 2;
+}
+
+message GetUserPostsRequest {
+  string user_id = 1;
+  string requester_id = 2;
+  common.PaginationRequest pagination = 3;
+}
+
+message GetCommunityPostsRequest {
+  string community_id = 1;
+  string requester_id = 2;
+  PostSortOrder sort_order = 3;
+  common.PaginationRequest pagination = 4;
+}
+
+// ============================================================================
+// Comments
+// ============================================================================
+
+message Comment {
+  string id = 1;
+  string post_id = 2;
+  common.UserRef author = 3;
+  string parent_comment_id = 4;       // For nested comments
+  string content = 5;
+  int32 reaction_count = 6;
+  int32 reply_count = 7;
+  bool is_edited = 8;
+  bool flagged = 9;
+  UserReaction user_reaction = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+message AddCommentRequest {
+  string post_id = 1;
+  string user_id = 2;
+  string parent_comment_id = 3;       // Optional (for replies)
+  string content = 4;
+}
+
+message GetCommentsRequest {
+  string post_id = 1;
+  string requester_id = 2;
+  CommentSortOrder sort_order = 3;
+  common.PaginationRequest pagination = 4;
+}
+
+enum CommentSortOrder {
+  COMMENT_SORT_ORDER_UNSPECIFIED = 0;
+  COMMENT_SORT_ORDER_RECENT = 1;
+  COMMENT_SORT_ORDER_POPULAR = 2;     // By reaction count
+}
+
+message GetCommentsResponse {
+  repeated Comment comments = 1;
+  common.PaginationResponse pagination = 2;
+}
+
+message UpdateCommentRequest {
+  string comment_id = 1;
+  string user_id = 2;
+  string content = 3;
+}
+
+message DeleteCommentRequest {
+  string comment_id = 1;
+  string user_id = 2;
+}
+
+// ============================================================================
+// Reactions
+// ============================================================================
+
+message AddPostReactionRequest {
+  string post_id = 1;
+  string user_id = 2;
+  ReactionType reaction_type = 3;
+}
+
+message RemovePostReactionRequest {
+  string post_id = 1;
+  string user_id = 2;
+}
+
+message GetPostReactionsRequest {
+  string post_id = 1;
+  optional ReactionType reaction_type = 2; // Filter by type
+  common.PaginationRequest pagination = 3;
+}
+
+message GetPostReactionsResponse {
+  repeated ReactionDetail reactions = 1;
+  ReactionSummary summary = 2;
+  common.PaginationResponse pagination = 3;
+}
+
+message ReactionDetail {
+  common.UserRef user = 1;
+  ReactionType reaction_type = 2;
+  google.protobuf.Timestamp created_at = 3;
+}
+
+message ReactionSummary {
+  int32 total_count = 1;
+  int32 like_count = 2;
+  int32 love_count = 3;
+  int32 celebrate_count = 4;
+  int32 insightful_count = 5;
+  int32 support_count = 6;
+  int32 funny_count = 7;
+}
+
+message AddCommentReactionRequest {
+  string comment_id = 1;
+  string user_id = 2;
+  ReactionType reaction_type = 3;
+}
+
+message RemoveCommentReactionRequest {
+  string comment_id = 1;
+  string user_id = 2;
+}
+
+// ============================================================================
+// Saved Posts
+// ============================================================================
+
+message SavePostRequest {
+  string user_id = 1;
+  string post_id = 2;
+  string collection_name = 3;         // Optional collection/folder
+}
+
+message UnsavePostRequest {
+  string user_id = 1;
+  string post_id = 2;
+}
+
+message GetSavedPostsRequest {
+  string user_id = 1;
+  string collection_name = 2;         // Optional filter
+  common.PaginationRequest pagination = 3;
+}
+
+// ============================================================================
+// Polls
+// ============================================================================
+
+message Poll {
+  string id = 1;
+  string post_id = 2;
+  string question = 3;
+  repeated PollOption options = 4;
+  google.protobuf.Timestamp expires_at = 5;
+  bool allow_multiple = 6;
+  int32 total_votes = 7;
+  bool has_voted = 8;                 // From requester's perspective
+  repeated int32 user_votes = 9;      // Option indexes user voted for
+}
+
+message PollData {
+  string question = 1;
+  repeated string options = 2;
+  int32 duration_hours = 3;           // Poll duration (default: 24h)
+  bool allow_multiple = 4;
+}
+
+message PollOption {
+  int32 index = 1;
+  string text = 2;
+  int32 vote_count = 3;
+  double percentage = 4;
+}
+
+message VotePollRequest {
+  string poll_id = 1;
+  string user_id = 2;
+  repeated int32 option_indexes = 3;
+}
+
+message GetPollResultsRequest {
+  string poll_id = 1;
+  string requester_id = 2;
+}
+
+message PollResults {
+  Poll poll = 1;
+}
+
+// ============================================================================
+// Reporting
+// ============================================================================
+
+enum ReportReason {
+  REPORT_REASON_UNSPECIFIED = 0;
+  REPORT_REASON_SPAM = 1;
+  REPORT_REASON_HARASSMENT = 2;
+  REPORT_REASON_HATE_SPEECH = 3;
+  REPORT_REASON_MISINFORMATION = 4;
+  REPORT_REASON_INAPPROPRIATE = 5;
+  REPORT_REASON_OTHER = 6;
+}
+
+message ReportPostRequest {
+  string post_id = 1;
+  string reporter_id = 2;
+  ReportReason reason = 3;
+  string description = 4;
+}
+
+message ReportCommentRequest {
+  string comment_id = 1;
+  string reporter_id = 2;
+  ReportReason reason = 3;
+  string description = 4;
+}
