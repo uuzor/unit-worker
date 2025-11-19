@@ -1,0 +1,129 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14-alpine
+    container_name: ikampus-postgres
+    environment:
+      POSTGRES_DB: ikampus
+      POSTGRES_USER: ikampus_user
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../../database/schemas:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ikampus_user -d ikampus"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ikampus-network
+
+  # Redis (Optional - for caching)
+  redis:
+    image: redis:7-alpine
+    container_name: ikampus-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - ikampus-network
+
+  # AuthService
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ikampus-auth-service
+    ports:
+      - "8080:8080"  # HTTP (health checks)
+      - "9000:9000"  # gRPC
+    environment:
+      # Server
+      SERVER_PORT: 8080
+      GRPC_PORT: 9000
+      ENVIRONMENT: development
+      SHUTDOWN_TIMEOUT: 10s
+
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ikampus_user
+      DB_PASSWORD: changeme
+      DB_NAME: ikampus
+      DB_SSLMODE: disable
+      DB_MAX_OPEN_CONNS: 25
+      DB_MAX_IDLE_CONNS: 5
+      DB_CONN_MAX_LIFETIME: 5m
+
+      # JWT
+      JWT_ACCESS_SECRET: dev-secret-access-change-in-production-12345
+      JWT_REFRESH_SECRET: dev-secret-refresh-change-in-production-67890
+      JWT_ACCESS_EXPIRY: 15m
+      JWT_REFRESH_EXPIRY: 720h
+      JWT_ISSUER: ikampus-auth
+
+      # Email (SMTP)
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 587
+      SMTP_USER: ""
+      SMTP_PASSWORD: ""
+      FROM_EMAIL: noreply@ikampus.com
+      FROM_NAME: iKampus
+      VERIFICATION_EXPIRY: 24h
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+      REDIS_DB: 0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - ikampus-network
+
+  # Optional: pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: ikampus-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@ikampus.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - ikampus-network
+    profiles:
+      - tools
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  ikampus-network:
+    driver: bridge
